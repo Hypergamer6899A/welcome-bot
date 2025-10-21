@@ -1,4 +1,4 @@
-// index.js
+ // index.js
 const { Client, GatewayIntentBits } = require('discord.js');
 require('dotenv').config();
 const express = require('express'); // Express for Render port
@@ -8,75 +8,73 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
 });
 
-// join messages
 const joinMessages = [
   "Welcome {Username} to GoShiggy's Basement",
-  "{Username} has arrived, lets see how long they last",
+  "{Username} has arrived, let's see how long they last",
   "{Username} just made the member count {PlayerCount}",
   "Looks like {Username} is also a GoShiggy fan",
-  "Goodluck {Username}, you'll need it",
+  "Good luck {Username}, you'll need it",
   "{PlayerCount} members now counting {Username}",
   "{Username}? That's an interesting name"
 ];
 
-// In-memory dedupe: map of userId -> timestamp (ms)
-const recentJoins = new Map();
-// dedupe window in ms
+// --- In-memory dedupe to prevent duplicate messages ---
+const welcomedMembers = new Set();
 const DEDUPE_WINDOW = 20 * 1000; // 20 seconds
+const recentJoins = new Map(); // userId -> timestamp
 
-client.once('ready', () => {
-  console.log(`✅ Logged in as ${client.user.tag} (pid=${process.pid}) at ${new Date().toISOString()}`);
-});
-
-// helper: pick random message and replace tokens
+// --- Helper to pick a random message ---
 function formatMessage(template, member) {
   return template
     .replace(/{Username}/g, member.user.username)
     .replace(/{PlayerCount}/g, member.guild.memberCount);
 }
 
-client.on('guildMemberAdd', async (member) => {
+// --- Function to send welcome message safely ---
+async function sendWelcome(member) {
+  if (member.user.bot) return; // ignore bots
+
+  const now = Date.now();
+  const last = recentJoins.get(member.id) || 0;
+  if (now - last < DEDUPE_WINDOW) return; // dedupe
+  recentJoins.set(member.id, now);
+
+  if (welcomedMembers.has(member.id)) return; // already welcomed in this session
+  welcomedMembers.add(member.id);
+
+  const channel = member.guild.channels.cache.get(process.env.CHANNEL_ID);
+  if (!channel) return console.error("❌ Channel not found. Check CHANNEL_ID.");
+
+  const messageTemplate = joinMessages[Math.floor(Math.random() * joinMessages.length)];
+  const message = formatMessage(messageTemplate, member);
+
   try {
-    // IGNORE other bots joining (common desired behavior)
-    if (member.user.bot) {
-      console.log(`Ignoring bot join: ${member.user.tag}`);
-      return;
-    }
-
-    // Dedupe by user id
-    const now = Date.now();
-    const last = recentJoins.get(member.id) || 0;
-    if (now - last < DEDUPE_WINDOW) {
-      console.log(`Deduped join event for ${member.user.tag} (user id ${member.id}). Last sent ${now - last}ms ago.`);
-      return;
-    }
-    // update last seen
-    recentJoins.set(member.id, now);
-
-    // clean up old entries occasionally to avoid memory growth
-    if (recentJoins.size > 500) {
-      const cutoff = now - DEDUPE_WINDOW;
-      for (const [uid, ts] of recentJoins) {
-        if (ts < cutoff) recentJoins.delete(uid);
-      }
-    }
-
-    const channel = member.guild.channels.cache.get(process.env.CHANNEL_ID);
-    if (!channel) {
-      console.error("❌ Channel not found. Check CHANNEL_ID.");
-      return;
-    }
-
-    const messageTemplate = joinMessages[Math.floor(Math.random() * joinMessages.length)];
-    const message = formatMessage(messageTemplate, member);
-
-    console.log(`Sending welcome message for ${member.user.tag} (pid=${process.pid}) at ${new Date().toISOString()}`);
     await channel.send(message);
+    console.log(`Sent welcome for ${member.user.tag}`);
   } catch (err) {
-    console.error('Error in guildMemberAdd handler:', err);
+    console.error('Failed to send welcome message:', err);
+  }
+}
+
+// --- Event: new member joins while bot is online ---
+client.on('guildMemberAdd', sendWelcome);
+
+// --- On bot ready ---
+client.once('ready', async () => {
+  console.log(`✅ Logged in as ${client.user.tag} (pid=${process.pid})`);
+
+  // Optional: welcome members who joined while bot was offline
+  for (const [guildId, guild] of client.guilds.cache) {
+    const channel = guild.channels.cache.get(process.env.CHANNEL_ID);
+    if (!channel) continue;
+
+    // Loop over all members currently in server
+    await guild.members.fetch(); // fetch all members to cache
+    guild.members.cache.forEach(member => sendWelcome(member));
   }
 });
 
+// --- Login bot ---
 client.login(process.env.TOKEN).catch(err => {
   console.error('Failed to login bot. Check TOKEN env variable.', err);
 });
