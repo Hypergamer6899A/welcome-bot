@@ -1,3 +1,4 @@
+// index.js (CommonJS)
 const { Client, GatewayIntentBits } = require('discord.js');
 require('dotenv').config();
 
@@ -5,11 +6,13 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
 });
 
-// List of custom join messages
+// Your messages
 const joinMessages = [
-  "Welcome to GoShiggy's Basement {Username}!",
-  "{Username} just made the membercound {PlayerCount}!",
-  "Oh, {Username} just joined. Lets see how long they last"
+  "Welcome to the server, {Username}! You're member #{PlayerCount} 🎉",
+  "Hey {Username}, glad you joined! We’re now {PlayerCount} strong 💪",
+  "{Username} just appeared — bringing us up to {PlayerCount} members!",
+  "A wild {Username} has joined! Total members: {PlayerCount} 👀",
+  "Welcome aboard, {Username}! You’re lucky number {PlayerCount} 🚀"
 ];
 
 client.once('ready', () => {
@@ -17,20 +20,40 @@ client.once('ready', () => {
 });
 
 client.on('guildMemberAdd', (member) => {
-  // Get channel ID from environment variable
   const channel = member.guild.channels.cache.get(process.env.CHANNEL_ID);
-  if (!channel) return console.error("❌ Channel not found. Check CHANNEL_ID.");
+  if (!channel) {
+    console.error('❌ Channel not found. Check CHANNEL_ID in Render env variables.');
+    return;
+  }
 
-  // Pick a random message
-  const messageTemplate = joinMessages[Math.floor(Math.random() * joinMessages.length)];
-
-  // Replace placeholders
-  const message = messageTemplate
+  const template = joinMessages[Math.floor(Math.random() * joinMessages.length)];
+  const message = template
     .replace(/{Username}/g, member.user.username)
     .replace(/{PlayerCount}/g, member.guild.memberCount);
 
-  // Send it!
-  channel.send(message);
+  channel.send(message).catch(err => console.error('Failed to send welcome message:', err));
 });
 
-client.login(process.env.TOKEN);
+// Login the bot
+client.login(process.env.TOKEN).catch(err => {
+  console.error('Failed to login the bot. Check TOKEN env variable:', err);
+});
+
+// -------- tiny HTTP server so Render sees an open port --------
+const express = require('express');
+const app = express();
+
+app.get('/', (req, res) => {
+  res.send('Bot is running');
+});
+
+// optional health endpoint
+app.get('/healthz', (req, res) => {
+  res.json({ status: 'ok', bot: client.user ? client.user.tag : 'starting' });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🌐 Tiny web server listening on port ${PORT}`);
+});
+
