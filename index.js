@@ -9,11 +9,13 @@ const client = new Client({
 });
 
 const joinMessages = [
-  "Welcome to the server, {Username}! You're member #{PlayerCount} 🎉",
-  "Hey {Username}, glad you joined us! We’re now {PlayerCount} strong 💪",
-  "{Username} just appeared — bringing us up to {PlayerCount} members!",
-  "A wild {Username} has joined! Total members: {PlayerCount} 👀",
-  "Welcome aboard, {Username}! You’re lucky number {PlayerCount} 🚀"
+  "Welcome {Username} to GoShiggy's Basement",
+  "{Username} has arrived, lets see how long they last",
+  "{Username} just made the member count {PlayerCount}",
+  "Looks like {Username} is also a GoShiggy fan",
+  "Goodluck {Username}, you'll need it",
+  "{PlayerCount} members now counting {Username}",
+  "{Username}? That's an interesting name"
 ];
 
 client.once('ready', () => {
