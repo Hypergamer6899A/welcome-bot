@@ -1,4 +1,4 @@
- // index.js
+// index.js
 const { Client, GatewayIntentBits } = require('discord.js');
 require('dotenv').config();
 const express = require('express'); // Express for Render port
@@ -18,11 +18,6 @@ const joinMessages = [
   "{Username}? That's an interesting name"
 ];
 
-// --- In-memory dedupe to prevent duplicate messages ---
-const welcomedMembers = new Set();
-const DEDUPE_WINDOW = 20 * 1000; // 20 seconds
-const recentJoins = new Map(); // userId -> timestamp
-
 // --- Helper to pick a random message ---
 function formatMessage(template, member) {
   return template
@@ -30,17 +25,10 @@ function formatMessage(template, member) {
     .replace(/{PlayerCount}/g, member.guild.memberCount);
 }
 
-// --- Function to send welcome message safely ---
-async function sendWelcome(member) {
-  if (member.user.bot) return; // ignore bots
-
-  const now = Date.now();
-  const last = recentJoins.get(member.id) || 0;
-  if (now - last < DEDUPE_WINDOW) return; // dedupe
-  recentJoins.set(member.id, now);
-
-  if (welcomedMembers.has(member.id)) return; // already welcomed in this session
-  welcomedMembers.add(member.id);
+// --- Event: new member joins ---
+client.on('guildMemberAdd', async (member) => {
+  // Ignore bots if you want
+  if (member.user.bot) return;
 
   const channel = member.guild.channels.cache.get(process.env.CHANNEL_ID);
   if (!channel) return console.error("❌ Channel not found. Check CHANNEL_ID.");
@@ -50,28 +38,15 @@ async function sendWelcome(member) {
 
   try {
     await channel.send(message);
-    console.log(`Sent welcome for ${member.user.tag}`);
+    console.log(`Sent welcome message for ${member.user.tag}`);
   } catch (err) {
     console.error('Failed to send welcome message:', err);
   }
-}
-
-// --- Event: new member joins while bot is online ---
-client.on('guildMemberAdd', sendWelcome);
+});
 
 // --- On bot ready ---
-client.once('ready', async () => {
+client.once('ready', () => {
   console.log(`✅ Logged in as ${client.user.tag} (pid=${process.pid})`);
-
-  // Optional: welcome members who joined while bot was offline
-  for (const [guildId, guild] of client.guilds.cache) {
-    const channel = guild.channels.cache.get(process.env.CHANNEL_ID);
-    if (!channel) continue;
-
-    // Loop over all members currently in server
-    await guild.members.fetch(); // fetch all members to cache
-    guild.members.cache.forEach(member => sendWelcome(member));
-  }
 });
 
 // --- Login bot ---
