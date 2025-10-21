@@ -9,21 +9,24 @@ const client = new Client({
 });
 
 const joinMessages = [
-  "Welcome {Username} to GoShiggy's Basement",
-  "{Username} has arrived, let's see how long they last",
-  "{Username} just made the member count {PlayerCount}",
-  "Looks like {Username} is also a GoShiggy fan",
-  "Good luck {Username}, you'll need it",
-  "{PlayerCount} members now counting {Username}",
-  "{Username}? That's an interesting name"
+  "Welcome {Username} to {ServerName}!",
+  "{Username} has arrived, let's see how long they last...",
+  "{Username} just made the member count {PlayerCount}.",
+  "Good luck {Username}, you'll need it.",
+  "{PlayerCount} members now counting {Username}!",
+  "{Username}? That's an interesting name...",
+  "{Username} has dropped by {ServerName}.",
+  "{ServerName} has a brand new member. It's the one, the only, {Username}!"
 ];
 
 // --- Helper ---
 function formatMessage(template, member) {
-  // Use a proper mention instead of just username
   return template
     .replace(/{Username}/g, `<@${member.id}>`)
-    .replace(/{PlayerCount}/g, member.guild.memberCount);
+    .replace(/{PlayerCount}/g, member.guild.memberCount)
+    .replace(/{ServerName}/g, member.guild.name);
+}
+
 }
 
 // --- Send Welcome ---
