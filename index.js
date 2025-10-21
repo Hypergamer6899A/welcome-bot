@@ -1,11 +1,11 @@
 // index.js
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, PermissionFlagsBits } = require('discord.js');
 require('dotenv').config();
-const express = require('express'); // Express for Render port
+const express = require('express');
 
 // --- Discord Bot Setup ---
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages],
 });
 
 const joinMessages = [
@@ -18,17 +18,18 @@ const joinMessages = [
   "{Username}? That's an interesting name"
 ];
 
-// --- Helper to pick a random message ---
+// --- Helper ---
 function formatMessage(template, member) {
+  // Use a proper mention instead of just username
   return template
-    .replace(/{Username}/g, member.user.username)
+    .replace(/{Username}/g, `<@${member.id}>`)
     .replace(/{PlayerCount}/g, member.guild.memberCount);
 }
 
-// --- Event: new member joins ---
-client.on('guildMemberAdd', async (member) => {
-  // Ignore bots if you want
-  if (member.user.bot) return;
+// --- Send Welcome ---
+async function sendWelcome(member) {
+  if (!member) return;
+  if (member.user.bot) return; // optional, skip bots
 
   const channel = member.guild.channels.cache.get(process.env.CHANNEL_ID);
   if (!channel) return console.error("❌ Channel not found. Check CHANNEL_ID.");
@@ -42,19 +43,68 @@ client.on('guildMemberAdd', async (member) => {
   } catch (err) {
     console.error('Failed to send welcome message:', err);
   }
-});
+}
 
-// --- On bot ready ---
-client.once('ready', () => {
+// --- Event: New member joins ---
+client.on('guildMemberAdd', sendWelcome);
+
+// --- Register Slash Command ---
+client.once('ready', async () => {
   console.log(`✅ Logged in as ${client.user.tag} (pid=${process.pid})`);
+
+  const commands = [
+    {
+      name: 'testwelcome',
+      description: 'Sends a test welcome message to a specified user',
+      options: [
+        {
+          name: 'user',
+          type: 6, // USER
+          description: 'User to test the welcome message for',
+          required: true,
+        },
+      ],
+      default_member_permissions: PermissionFlagsBits.Administrator.toString(), // admin-only
+    },
+  ];
+
+  const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+
+  try {
+    await rest.put(
+      Routes.applicationGuildCommands(client.user.id, process.env.GUILD_ID),
+      { body: commands }
+    );
+    console.log('✅ Slash command registered.');
+  } catch (err) {
+    console.error('Failed to register slash commands:', err);
+  }
 });
 
-// --- Login bot ---
+// --- Handle Slash Command ---
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isCommand()) return;
+
+  if (interaction.commandName === 'testwelcome') {
+    if (!interaction.memberPermissions.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({ content: '❌ You do not have permission to use this.', ephemeral: true });
+    }
+
+    const user = interaction.options.getUser('user');
+    const guildMember = interaction.guild.members.cache.get(user.id);
+    if (!guildMember) return interaction.reply({ content: 'User not found in this server.', ephemeral: true });
+
+    await sendWelcome(guildMember);
+    return interaction.reply({ content: `✅ Test welcome sent to ${user.tag}`, ephemeral: true });
+  }
+});
+
+// --- Login Bot ---
 client.login(process.env.TOKEN).catch(err => {
   console.error('Failed to login bot. Check TOKEN env variable.', err);
 });
 
-// --- Tiny Express Server for Render Port Scan ---
+// --- Express server for Render ---
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -64,7 +114,7 @@ app.get('/health', (req, res) => {
     status: 'ok',
     bot: client.user ? client.user.tag : 'starting',
     pid: process.pid,
-    time: new Date().toISOString()
+    time: new Date().toISOString(),
   });
 });
 
