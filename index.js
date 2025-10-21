@@ -27,7 +27,6 @@ function formatMessage(template, member) {
     .replace(/{ServerName}/g, member.guild.name);
 }
 
-}
 
 // --- Send Welcome ---
 async function sendWelcome(member, isTest = false) {
