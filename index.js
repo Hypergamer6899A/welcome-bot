@@ -46,29 +46,7 @@ async function sendWelcome(member, isTest = false) {
 }
 
 // --- Event: New member joins ---
-client.on('guildMemberAdd', (member) => {
-  // Only trigger automatic welcome for real members (not tests)
-  if (!member.user.bot) sendWelcome(member, false);
-});
-
-// --- Handle Slash Command ---
-client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isCommand()) return;
-
-  if (interaction.commandName === 'testwelcome') {
-    if (!interaction.memberPermissions.has(PermissionFlagsBits.Administrator)) {
-      return interaction.reply({ content: '❌ You do not have permission to use this.', ephemeral: true });
-    }
-
-    const user = interaction.options.getUser('user');
-    const guildMember = interaction.guild.members.cache.get(user.id);
-    if (!guildMember) return interaction.reply({ content: 'User not found in this server.', ephemeral: true });
-
-    // Always send as a test, bypassing guildMemberAdd completely
-    await sendWelcome(guildMember, true);
-    return interaction.reply({ content: `✅ Test welcome sent to ${user.tag}`, ephemeral: true });
-  }
-});
+client.on('guildMemberAdd', (member) => sendWelcome(member, false));
 
 // --- Register Slash Command ---
 client.once('ready', async () => {
@@ -103,8 +81,20 @@ client.once('ready', async () => {
   }
 });
 
+// --- Handle Slash Command ---
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isCommand()) return;
 
-    // Send as a test, so we bypass normal guildMemberAdd restrictions
+  if (interaction.commandName === 'testwelcome') {
+    if (!interaction.memberPermissions.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({ content: '❌ You do not have permission to use this.', ephemeral: true });
+    }
+
+    const user = interaction.options.getUser('user');
+    const guildMember = interaction.guild.members.cache.get(user.id);
+    if (!guildMember) return interaction.reply({ content: 'User not found in this server.', ephemeral: true });
+
+    // Send as a test, bypassing guildMemberAdd
     await sendWelcome(guildMember, true);
     return interaction.reply({ content: `✅ Test welcome sent to ${user.tag}`, ephemeral: true });
   }
