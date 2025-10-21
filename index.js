@@ -7,11 +7,9 @@ const client = new Client({
 
 // List of custom join messages
 const joinMessages = [
-  "Welcome to the server, {Username}! You're member #{PlayerCount} 🎉",
-  "Hey {Username}, glad you joined us! We’re now {PlayerCount} strong 💪",
-  "{Username} just appeared — bringing us up to {PlayerCount} members!",
-  "A wild {Username} has joined! Total members: {PlayerCount} 👀",
-  "Welcome aboard, {Username}! You’re lucky number {PlayerCount} 🚀"
+  "Welcome to GoShiggy's Basement {Username}!",
+  "{Username} just made the membercound {PlayerCount}!",
+  "Oh, {Username} just joined. Lets see how long they last"
 ];
 
 client.once('ready', () => {
