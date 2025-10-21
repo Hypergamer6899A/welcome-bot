@@ -27,9 +27,9 @@ function formatMessage(template, member) {
 }
 
 // --- Send Welcome ---
-async function sendWelcome(member) {
+async function sendWelcome(member, isTest = false) {
   if (!member) return;
-  if (member.user.bot) return; // optional, skip bots
+  if (member.user.bot && !isTest) return; // skip bots normally, allow for test
 
   const channel = member.guild.channels.cache.get(process.env.CHANNEL_ID);
   if (!channel) return console.error("❌ Channel not found. Check CHANNEL_ID.");
@@ -39,14 +39,14 @@ async function sendWelcome(member) {
 
   try {
     await channel.send(message);
-    console.log(`Sent welcome message for ${member.user.tag}`);
+    console.log(`Sent welcome message for ${member.user.tag}${isTest ? ' (test)' : ''}`);
   } catch (err) {
     console.error('Failed to send welcome message:', err);
   }
 }
 
 // --- Event: New member joins ---
-client.on('guildMemberAdd', sendWelcome);
+client.on('guildMemberAdd', (member) => sendWelcome(member, false));
 
 // --- Register Slash Command ---
 client.once('ready', async () => {
@@ -94,7 +94,8 @@ client.on('interactionCreate', async (interaction) => {
     const guildMember = interaction.guild.members.cache.get(user.id);
     if (!guildMember) return interaction.reply({ content: 'User not found in this server.', ephemeral: true });
 
-    await sendWelcome(guildMember);
+    // Send as a test, so we bypass normal guildMemberAdd restrictions
+    await sendWelcome(guildMember, true);
     return interaction.reply({ content: `✅ Test welcome sent to ${user.tag}`, ephemeral: true });
   }
 });
