@@ -9,13 +9,13 @@ const client = new Client({
 });
 
 const joinMessages = [
-  "Welcome {Username} to {ServerName}!",
+  //"Welcome {Username} to {ServerName}!",
   "{Username} has arrived, let's see how long they last...",
   "{Username} just made the member count {PlayerCount}.",
   "Good luck {Username}, you'll need it.",
   "{PlayerCount} members now counting {Username}!",
   "{Username}? That's an interesting name...",
-  "{Username} has dropped by {ServerName}.",
+  //"{Username} has dropped by {ServerName}.",
   "{ServerName} has a brand new member. It's the one, the only, {Username}!",
   "{Username} just got kidnapped",
   "{Username} discovered the nether"
