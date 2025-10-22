@@ -16,7 +16,9 @@ const joinMessages = [
   "{PlayerCount} members now counting {Username}!",
   "{Username}? That's an interesting name...",
   "{Username} has dropped by {ServerName}.",
-  "{ServerName} has a brand new member. It's the one, the only, {Username}!"
+  "{ServerName} has a brand new member. It's the one, the only, {Username}!",
+  "{Username} just got kidnapped",
+  "{Username} discovered the nether"
 ];
 
 // --- Helper ---
