@@ -1,15 +1,20 @@
 // index.js
-const { Client, GatewayIntentBits, REST, Routes, PermissionFlagsBits } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, PermissionFlagsBits, ActivityType } = require('discord.js');
 require('dotenv').config();
 const express = require('express');
 
-// --- Discord Bot Setup ---
+// --- Discord Client ---
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+  ],
 });
 
+// --- Welcome Messages ---
 const joinMessages = [
-  "{Servername} has joined {Username}... Wait I got it backwards, dang it",
+  "{ServerName} has joined {Username}... Wait I got it backwards, dang it",
   "{Username} has arrived, let's see how long they last...",
   "{Username} just made the member count {PlayerCount}",
   "Good luck {Username}, you'll need it",
@@ -29,7 +34,7 @@ const joinMessages = [
   "Welcome {Username}. Yes I got lazy with this message, don't judge me"
 ];
 
-// --- Helper ---
+// --- Helper to format messages ---
 function formatMessage(template, member) {
   return template
     .replace(/{Username}/g, `<@${member.id}>`)
@@ -37,17 +42,19 @@ function formatMessage(template, member) {
     .replace(/{ServerName}/g, member.guild.name);
 }
 
-
 // --- Send Welcome ---
 async function sendWelcome(member, isTest = false) {
   if (!member) return;
-  if (member.user.bot && !isTest) return; // skip bots normally, allow for test
+  if (member.user.bot && !isTest) return;
 
   const channel = member.guild.channels.cache.get(process.env.CHANNEL_ID);
-  if (!channel) return console.error("❌ Channel not found. Check CHANNEL_ID.");
+  if (!channel) {
+    console.error("❌ Channel not found. Check CHANNEL_ID.");
+    return;
+  }
 
-  const messageTemplate = joinMessages[Math.floor(Math.random() * joinMessages.length)];
-  const message = formatMessage(messageTemplate, member);
+  const template = joinMessages[Math.floor(Math.random() * joinMessages.length)];
+  const message = formatMessage(template, member);
 
   try {
     await channel.send(message);
@@ -58,21 +65,22 @@ async function sendWelcome(member, isTest = false) {
 }
 
 // --- Event: New member joins ---
-client.on('guildMemberAdd', (member) => sendWelcome(member, false));
+client.on('guildMemberAdd', (member) => {
+  console.log(`New member joined: ${member.user.tag}`);
+  sendWelcome(member);
+});
 
-// --- Register Slash Command ---
+// --- On Ready ---
 client.once('ready', async () => {
   console.log(`✅ Logged in as ${client.user.tag} (pid=${process.pid})`);
 
- // Set custom status
+  // Set bot presence
   client.user.setPresence({
-    activities: [
-      { name: "Welcoming Members", type: 0 } // 0 = Playing
-    ],
-    status: "online" // "online" | "idle" | "dnd" | "invisible"
+    activities: [{ name: 'Welcoming Members', type: ActivityType.Playing }],
+    status: 'online',
   });
 
-  
+  // Register slash command
   const commands = [
     {
       name: 'testwelcome',
@@ -85,7 +93,7 @@ client.once('ready', async () => {
           required: true,
         },
       ],
-      default_member_permissions: PermissionFlagsBits.Administrator.toString(), // admin-only
+      default_member_permissions: PermissionFlagsBits.Administrator.toString(),
     },
   ];
 
@@ -98,11 +106,11 @@ client.once('ready', async () => {
     );
     console.log('✅ Slash command registered.');
   } catch (err) {
-    console.error('Failed to register slash commands:', err);
+    console.error('❌ Failed to register slash commands:', err);
   }
 });
 
-// --- Handle Slash Command ---
+// --- Handle Slash Commands ---
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isCommand()) return;
 
@@ -112,21 +120,20 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     const user = interaction.options.getUser('user');
-    const guildMember = interaction.guild.members.cache.get(user.id);
-    if (!guildMember) return interaction.reply({ content: 'User not found in this server.', ephemeral: true });
+    const member = interaction.guild.members.cache.get(user.id);
+    if (!member) return interaction.reply({ content: 'User not found in this server.', ephemeral: true });
 
-    // Send as a test, bypassing guildMemberAdd
-    await sendWelcome(guildMember, true);
+    await sendWelcome(member, true);
     return interaction.reply({ content: `✅ Test welcome sent to ${user.tag}`, ephemeral: true });
   }
 });
 
-// --- Login Bot ---
+// --- Bot Login ---
 client.login(process.env.TOKEN).catch(err => {
-  console.error('Failed to login bot. Check TOKEN env variable.', err);
+  console.error('❌ Failed to login. Check TOKEN env variable.', err);
 });
 
-// --- Express server for Render ---
+// --- Express keepalive for Render ---
 const app = express();
 const PORT = process.env.PORT || 3000;
 
