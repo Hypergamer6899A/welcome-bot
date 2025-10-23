@@ -64,6 +64,15 @@ client.on('guildMemberAdd', (member) => sendWelcome(member, false));
 client.once('ready', async () => {
   console.log(`✅ Logged in as ${client.user.tag} (pid=${process.pid})`);
 
+ // Set custom status
+  client.user.setPresence({
+    activities: [
+      { name: "Welcoming Members", type: 0 } // 0 = Playing
+    ],
+    status: "online" // "online" | "idle" | "dnd" | "invisible"
+  });
+
+  
   const commands = [
     {
       name: 'testwelcome',
