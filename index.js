@@ -76,7 +76,7 @@ client.once('ready', async () => {
 
   // Set bot presence
   client.user.setPresence({
-    activities: [{ name: 'Welcoming Members', type: ActivityType.Playing }],
+    activities: [{ name: 'Welcome Members', type: ActivityType.Playing }],
     status: 'online',
   });
 
